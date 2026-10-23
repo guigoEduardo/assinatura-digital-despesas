@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10231d"><meta name="description" content="Gestao de despesas com validacao e assinatura digital demonstrativa.">
+  <title>AssinaDespesas | Controle com confianca</title><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="app" class="shell">
+    <section id="login-view" class="login-layout">
+      <div class="login-intro">
+        <a class="brand" href="./"><span class="brand-mark">A</span> assina<span>despesas</span></a>
+        <div class="intro-copy"><span class="eyebrow">CONTROLE FINANCEIRO · ASSINATURA DIGITAL</span><h1>Despesas sob controle.<br><em>Decisoes com confianca.</em></h1><p>Envie recibos, acompanhe validacoes e assine relatorios com uma trilha verificavel de integridade.</p><div class="trust-note"><span class="lock-icon">⌑</span><span>Chave privada criada no navegador e mantida neste dispositivo.</span></div></div>
+        <div class="intro-footer">PROTOTIPO ACADEMICO · SEGURANCA DESDE A CONCEPCAO</div>
+      </div>
+      <div class="login-panel"><div class="form-wrap"><span class="eyebrow">BEM-VINDO DE VOLTA</span><h2>Acesse sua conta</h2><p class="muted">Entre para continuar no painel de despesas.</p>
+        <form id="login-form"><label>E-mail<input name="email" type="email" autocomplete="username" placeholder="voce@empresa.com" required></label><label>Senha<input name="password" type="password" autocomplete="current-password" placeholder="Sua senha" required></label><button class="button primary wide" type="submit">Entrar <span>→</span></button><div id="login-error" class="feedback" role="alert"></div></form>
+        <div class="demo-box"><span class="demo-dot"></span><div><strong>Ambiente de demonstracao</strong><small>Gerente: gerente@demo.local / Gerente123!<br>Colaborador: colaborador@demo.local / Colab123!</small></div></div>
+      </div><div class="login-foot">ACESSO SEGURO · SESSAO COM EXPIRACAO AUTOMATICA</div></div>
+    </section>
+    <section id="dashboard-view" class="dashboard hidden">
+      <aside class="sidebar"><a class="brand" href="#"><span class="brand-mark">A</span> assina<span>despesas</span></a><div class="workspace-label">WORKSPACE <span>EMPRESA DEMO</span></div><nav id="navigation"></nav><div class="sidebar-bottom"><div class="secure-badge"><span>◈</span><div><strong>Ambiente protegido</strong><small>Criptografia ativa</small></div></div><button id="logout" class="logout">↪ &nbsp;Sair da conta</button><small class="version">ASSINADESPESAS · V1.0</small></div></aside>
+      <section class="main-area"><header class="topbar"><div class="breadcrumb">Workspace <span>/</span> <strong id="page-name">Visao geral</strong></div><div class="top-actions"><span class="secure-top">◈ &nbsp;Sessao protegida</span><div class="avatar" id="avatar">MC</div><div class="user-label"><strong id="user-name">Marina Costa</strong><small id="user-role">GERENTE</small></div></div></header><div id="content" class="content"></div></section>
+    </section>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="config.js" defer></script><script src="app.js" defer></script>
+</body>
+</html>
