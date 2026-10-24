@@ -23,8 +23,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE: https://assinatura-digital-despesas.onrender.com
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: out
       - id: deployment
         uses: actions/deploy-pages@v4

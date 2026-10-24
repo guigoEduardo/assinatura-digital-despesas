@@ -1,6 +1,9 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_API_BASE: http://localhost:3000
     restart: unless-stopped
     environment:
       PORT: 3000

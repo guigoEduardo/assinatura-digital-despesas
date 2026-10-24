@@ -47,7 +47,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '1mb' }));
-app.use(express.static(path.join(root, 'public'), { extensions: ['html'] }));
+app.use(express.static(path.join(root, 'out'), { extensions: ['html'] }));
 
 function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');

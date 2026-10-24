@@ -1,23 +1,25 @@
 # AssinaDespesas
 
-Aplicacao demonstrativa para gerenciar funcionarios, registrar despesas com recibos, revisar relatorios e verificar assinaturas digitais. A interface e estativa e pode ser publicada no GitHub Pages; a API Node.js e o MongoDB precisam rodar em um servico separado com HTTPS.
+Demonstrador acadêmico de gestão de despesas com revisão e assinatura digital verificável. A interface usa Next.js 16 com App Router e é exportada como arquivos estáticos para GitHub Pages. A API continua em Node.js/Express e usa MongoDB.
 
 ## Funcionalidades
 
-- Login com senhas armazenadas como hashes scrypt, token assinado HMAC e limitacao de tentativas.
-- Cadastro, edicao e ativacao de funcionarios com perfis de gerente e colaborador.
-- Envio de despesas com recibos PDF, JPG ou PNG de ate 8 MB; verificacao do formato e calculo do hash SHA-256.
-- Fluxo de revisao do gerente, assinatura do colaborador e verificacao criptografica pelo gerente.
-- Assinatura ECDSA P-256 via Web Crypto. A chave privada e nao exportavel e fica no navegador do colaborador; a API armazena a chave publica.
-- Avisos por e-mail opcionais usando Nodemailer e credenciais SMTP fornecidas em tempo de execucao.
-- Helmet, limites de entrada, acesso autenticado, Docker Compose e MongoDB.
+- Login com senhas armazenadas como hashes scrypt, token assinado HMAC e limitação de tentativas.
+- Cadastro, edição e ativação de funcionários com perfis de gerente e colaborador.
+- Envio de despesas com recibos PDF, JPG ou PNG de até 8 MB; validação do formato e cálculo do hash SHA-256.
+- Fluxo de revisão do gerente, assinatura do colaborador e verificação criptográfica pelo gerente.
+- Assinatura ECDSA P-256 via Web Crypto. A chave privada não é exportável e fica no navegador do colaborador; a API armazena a chave pública.
+- Avisos por e-mail opcionais com Nodemailer e credenciais SMTP fornecidas em tempo de execução.
+- Helmet, autenticação, Docker Compose e MongoDB.
 
 ## Executar localmente
 
-Requisitos: Docker com Compose e Node.js 20+ (para executar sem Docker).
+Requisitos: Docker com Compose ou Node.js 22+ e pnpm 11.
 
-1. Copie `.env.example` para `.env` e defina `JWT_SECRET` e `MONGO_ROOT_PASSWORD` com valores aleatorios fortes. Use uma senha do MongoDB sem caracteres especiais de URL ou codifique-a antes de coloca-la em `MONGO_ROOT_PASSWORD`.
-2. Inicie o sistema:
+### Aplicação completa com Docker
+
+1. Copie `.env.example` para `.env` e configure `JWT_SECRET` e `MONGO_ROOT_PASSWORD` com valores aleatórios fortes.
+2. Inicie a API, a interface exportada pelo Next.js e o MongoDB:
 
    ```sh
    docker compose up --build
@@ -25,44 +27,47 @@ Requisitos: Docker com Compose e Node.js 20+ (para executar sem Docker).
 
 3. Abra `http://localhost:3000`.
 
-Contas de demonstracao criadas somente quando o banco esta vazio:
+### Desenvolvimento da interface Next.js
 
-| Perfil | E-mail | Senha |
-| --- | --- | --- |
-| Gerente | `gerente@demo.local` | `Gerente123!` |
-| Colaborador | `colaborador@demo.local` | `Colab123!` |
+1. Instale as dependências com `pnpm install`.
+2. Em um terminal, inicie a API/MongoDB com Docker: `docker compose up mongo`.
+3. Inicie a API na porta 3001 e configure `MONGODB_URI` e `JWT_SECRET` no ambiente. No PowerShell, use `$env:PORT=3001; $env:MONGODB_URI='mongodb://localhost:27017'; $env:JWT_SECRET='<segredo-local-com-32-caracteres-ou-mais>'; pnpm start`.
+4. Em outro terminal, configure `NEXT_PUBLIC_API_BASE=http://localhost:3001` e execute `pnpm dev`.
 
-Para rodar o servidor sem Docker, inicie um MongoDB local, instale os pacotes (`npm install`), defina `JWT_SECRET` e `MONGODB_URI`, e execute `npm start`.
+O backend cria contas de demonstração quando o banco está vazio. Elas são somente para desenvolvimento local; não use essas contas em um serviço público.
 
-## Publicar a interface no GitHub Pages
+## Publicação
 
-O workflow `.github/workflows/pages.yml` publica a pasta `public` no Pages ao enviar commits para `main`. No repositorio, configure **Settings → Pages → Build and deployment → GitHub Actions**. O Pages disponibiliza a interface por HTTPS, mas nao executa o servidor Node nem o banco.
+O workflow `.github/workflows/pages.yml` executa `pnpm build` e publica a pasta `out` no GitHub Pages ao enviar commits para `main`. O `basePath` é configurado automaticamente para o nome do repositório, permitindo servir o projeto em um subcaminho do Pages. Ative **Settings → Pages → Build and deployment → GitHub Actions** no repositório.
 
-Para a interface hospedada funcionar, implante `server.js` e MongoDB em um host de aplicacao, com um dominio HTTPS para a API, e configure:
+O frontend usa `NEXT_PUBLIC_API_BASE` durante o build. O workflow aponta para a API pública do Render. Esse endereço é público e não deve conter credenciais. O Pages hospeda somente os arquivos estáticos; recursos de servidor Next.js não rodam lá. A API e o banco permanecem serviços separados.
 
-1. `WEB_ORIGIN` com a origem exata da pagina, por exemplo `https://guigoeduardo.github.io` (sem caminho ou barra final).
-2. `MONGODB_URI`, `JWT_SECRET` e credenciais SMTP como secrets do host, nunca no repositorio ou no frontend.
-3. `window.APP_API_BASE` em `public/config.js` com a URL HTTPS publica da API, sem barra final; publique o commit depois dessa alteracao.
-4. TLS na API por meio do host ou de um proxy reverso com certificado valido. Configure o host para nao aceitar HTTP publico.
+No Render, o `Dockerfile` constrói o export estático Next.js e executa a API Express, que serve o frontend e os endpoints `/api`. Configure no host:
 
-O endpoint da API deve aceitar apenas a origem configurada em `WEB_ORIGIN`. A URL do frontend e publica, portanto as contas de demonstracao sao apenas para desenvolvimento local. Remova ou substitua as contas demonstrativas antes de disponibilizar o backend publicamente; nunca use dados reais no ambiente de exemplo.
+- `MONGODB_URI`, `MONGODB_DB` e `JWT_SECRET` como variáveis de ambiente secretas.
+- `WEB_ORIGIN` com a origem exata do Pages, por exemplo `https://guigoeduardo.github.io`, sem caminho nem barra final.
+- Credenciais SMTP apenas se notificações por e-mail forem necessárias.
+
+Nunca coloque segredos no repositório, no código do frontend ou no histórico Git. O endpoint público do Render também pode servir a aplicação Next.js compilada; no Pages, o caminho oficial do frontend inclui o nome do repositório.
 
 ## Fluxo de assinatura
 
 1. O colaborador cria uma despesa e envia o recibo. A API calcula o hash SHA-256 do arquivo.
-2. O gerente revisa o relatorio e o marca como validado.
-3. O colaborador gera/vincula sua chave no dispositivo e assina os dados do relatorio com ECDSA.
-4. A API verifica a assinatura antes de alterar o estado para assinado. O gerente pode executar a verificacao posteriormente; a tela mostra o resultado e o hash dos dados assinados.
+2. O gerente revisa o relatório e o marca como validado.
+3. O colaborador cria/vincula a chave no dispositivo e assina os dados do relatório com ECDSA.
+4. A API verifica a assinatura antes de marcar o relatório como assinado. O gerente pode verificar novamente a assinatura e o hash do recibo.
 
-As chaves locais ficam no IndexedDB do mesmo navegador e perfil. Limpar os dados do navegador pode tornar a chave indisponivel; gere uma nova e associe-a antes de novas assinaturas.
+As chaves locais ficam no IndexedDB do mesmo navegador e perfil. Limpar os dados do navegador pode tornar a chave indisponível; gere e associe uma nova antes de novas assinaturas.
 
 ## Estrutura
 
-- `public/`: interface responsiva e cliente Web Crypto.
-- `server.js`: API, autenticacao, validacao de fluxo, armazenamento e verificacao criptografica.
-- `docker-compose.yml`: servicos da aplicacao e do MongoDB autenticado.
-- `.github/workflows/pages.yml`: publicacao da interface estatica.
+- `app/`: App Router Next.js, layout, página inicial e estilos.
+- `lib/client-controller.js`: controlador de interações do navegador e chamadas à API.
+- `public/`: arquivos estáticos copiados para o export do Next.js.
+- `server.js`: API, autenticação, validação do fluxo, armazenamento e verificação criptográfica.
+- `docker-compose.yml`: aplicação e MongoDB autenticado para desenvolvimento local.
+- `.github/workflows/pages.yml`: build e publicação no GitHub Pages.
 
-## Limites do prototipo
+## Limites do protótipo
 
-Este projeto e um demonstrador academico, nao uma plataforma pronta para producao. A assinatura ECDSA prova que a chave privada correspondente assinou os bytes armazenados, e o hash ajuda a detectar alteracoes; a chave criada no navegador nao e uma identidade verificada nem um certificado ICP-Brasil. Isso, isoladamente, nao permite declarar validade juridica, autoria civil ou nao repudio em conformidade com toda a legislacao brasileira. Um uso empresarial real precisa de revisao juridica, gestao segura de identidade e chaves, recuperacao e revogacao, logs protegidos, backups, monitoramento, politicas de retencao, configuracao TLS e avaliacao de privacidade. Nao coloque dados pessoais, documentos ou despesas reais nesta instancia de demonstracao.
+Este projeto é um demonstrador acadêmico, não uma plataforma pronta para produção. A assinatura ECDSA prova que a chave privada correspondente assinou os bytes armazenados, e o hash ajuda a detectar alterações; a chave criada no navegador não é uma identidade verificada nem um certificado ICP-Brasil. Isso, isoladamente, não permite declarar validade jurídica, autoria civil ou não repúdio em conformidade com toda a legislação brasileira. Um uso empresarial real precisa de revisão jurídica, gestão segura de identidade e chaves, recuperação e revogação, logs protegidos, backups, monitoramento, políticas de retenção, configuração TLS e avaliação de privacidade. Não coloque dados pessoais, documentos ou despesas reais nesta instância de demonstração.
