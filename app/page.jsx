@@ -1,9 +1,11 @@
-import ClientRuntime from './client-runtime';
+const repositoryName = process.env.GITHUB_REPOSITORY?.split('/')[1] || 'assinatura-digital-despesas';
+const assetBasePath = process.env.GITHUB_ACTIONS === 'true' ? `/${repositoryName}` : '';
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'https://assinatura-digital-despesas.onrender.com';
 
 export default function HomePage() {
   return (
     <>
-      <main id="app" className="shell">
+      <main id="app" className="shell" data-api-base={apiBase}>
         <section id="login-view" className="login-layout">
           <div className="login-intro">
             <a className="brand" href="./"><span className="brand-mark">A</span> assina<span>despesas</span></a>
@@ -52,7 +54,7 @@ export default function HomePage() {
         </section>
       </main>
       <div id="toast" className="toast" role="status" />
-      <ClientRuntime />
+      <script src={`${assetBasePath}/client-controller.js`} defer />
     </>
   );
 }

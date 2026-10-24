@@ -1,5 +1,5 @@
 const state = { token: null, employee: null, page: 'overview', expenses: [], employees: [] };
-const API_BASE = String(window.APP_API_BASE || '').replace(/\/$/, '');
+const API_BASE = String(document.getElementById('app')?.dataset.apiBase || '').replace(/\/$/, '');
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const initials = name => String(name || '?').split(/\s+/).slice(0, 2).map(x => x[0]).join('').toUpperCase();
