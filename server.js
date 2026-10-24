@@ -23,13 +23,24 @@ await employees.createIndex({ email: 1 }, { unique: true });
 await expenses.createIndex({ createdAt: -1 });
 const loginAttempts = new Map();
 
+const demoUsersEnabled = process.env.NODE_ENV !== 'production' || process.env.DEMO_USERS_ENABLED === 'true';
 const starterUsers = [
-  { name: 'Marina Costa', email: 'gerente@demo.local', role: 'manager', department: 'Financeiro', password: 'Gerente123!' },
-  { name: 'Rafael Lima', email: 'colaborador@demo.local', role: 'employee', department: 'Operacoes', password: 'Colab123!' }
+  { name: 'Marina Costa', email: 'gerente@demo.local', role: 'manager', department: 'Financeiro', password: process.env.DEMO_MANAGER_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'Gerente123!') },
+  { name: 'Rafael Lima', email: 'colaborador@demo.local', role: 'employee', department: 'Operacoes', password: process.env.DEMO_EMPLOYEE_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'Colab123!') }
 ];
-for (const seed of starterUsers) {
-  const existing = await employees.findOne({ email: seed.email });
-  if (!existing) await employees.insertOne({ name: seed.name, email: seed.email, role: seed.role, department: seed.department, passwordHash: hashPassword(seed.password), active: true, publicKey: null, createdAt: new Date() });
+if (process.env.NODE_ENV === 'production' && demoUsersEnabled && starterUsers.some(user => !user.password)) {
+  throw new Error('Defina DEMO_MANAGER_PASSWORD e DEMO_EMPLOYEE_PASSWORD ou desative DEMO_USERS_ENABLED.');
+}
+if (demoUsersEnabled) {
+  for (const seed of starterUsers) {
+    if (!seed.password) {
+      console.warn(`Conta demonstrativa ${seed.email} nao iniciada: configure uma senha exclusiva.`);
+      continue;
+    }
+    const existing = await employees.findOne({ email: seed.email });
+    if (!existing) await employees.insertOne({ name: seed.name, email: seed.email, role: seed.role, department: seed.department, passwordHash: hashPassword(seed.password), active: true, publicKey: null, createdAt: new Date() });
+    else await employees.updateOne({ _id: existing._id }, { $set: { passwordHash: hashPassword(seed.password), active: true } });
+  }
 }
 
 mkdirSync(path.join(root, 'uploads'), { recursive: true });
@@ -48,6 +59,7 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(root, 'out'), { extensions: ['html'] }));
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');
@@ -100,7 +112,9 @@ app.post('/api/login', async (req, res) => {
   const attempts = loginAttempts.get(address);
   if (attempts && attempts.until > Date.now() && attempts.count >= 8) return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos e tente novamente.' });
   const { email, password } = req.body || {};
-  const user = await employees.findOne({ email: String(email || '').trim().toLowerCase(), active: true });
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!demoUsersEnabled && ['gerente@demo.local', 'colaborador@demo.local'].includes(normalizedEmail)) return res.status(401).json({ error: 'Contas demonstrativas desativadas neste ambiente.' });
+  const user = await employees.findOne({ email: normalizedEmail, active: true });
   if (!user || !checkPassword(password, user.passwordHash)) {
     const recent = attempts?.until > Date.now() ? attempts : { count: 0, until: Date.now() + 15 * 60 * 1000 };
     recent.count += 1; loginAttempts.set(address, recent);

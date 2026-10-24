@@ -1,4 +1,5 @@
 import './globals.css';
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 
 export const metadata = {
   title: 'AssinaDespesas | Controle com confiança',
@@ -8,7 +9,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <AppRouterCacheProvider options={{ enableCssLayer: true }}>
+          {children}
+        </AppRouterCacheProvider>
+      </body>
     </html>
   );
 }

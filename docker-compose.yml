@@ -1,28 +1,46 @@
 services:
-  app:
+  api:
     build:
       context: .
-      args:
-        NEXT_PUBLIC_API_BASE: http://localhost:3000
+      dockerfile: Dockerfile.api
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET:?Configure JWT_SECRET no arquivo .env}
       MONGODB_URI: mongodb://${MONGO_ROOT_USER:-appadmin}:${MONGO_ROOT_PASSWORD}@mongo:27017/?authSource=admin
-      MONGODB_DB: assinatura_despesas
+      MONGODB_DB: ${MONGODB_DB:-assinatura_despesas}
       WEB_ORIGIN: ${WEB_ORIGIN:-}
+      DEMO_USERS_ENABLED: ${DEMO_USERS_ENABLED:-true}
+      DEMO_MANAGER_PASSWORD: ${DEMO_MANAGER_PASSWORD:-Gerente123!}
+      DEMO_EMPLOYEE_PASSWORD: ${DEMO_EMPLOYEE_PASSWORD:-Colab123!}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       MAIL_FROM: ${MAIL_FROM:-AssinaDespesas <no-reply@example.com>}
-    ports:
-      - "127.0.0.1:3000:3000"
+    expose:
+      - "3000"
     depends_on:
       mongo:
         condition: service_healthy
     volumes:
       - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
   mongo:
     image: mongo:8
     restart: unless-stopped
@@ -30,9 +48,9 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-appadmin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Configure MONGO_ROOT_PASSWORD no arquivo .env}
-      MONGO_INITDB_DATABASE: assinatura_despesas
-    ports:
-      - "127.0.0.1:27017:27017"
+      MONGO_INITDB_DATABASE: ${MONGODB_DB:-assinatura_despesas}
+    expose:
+      - "27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
