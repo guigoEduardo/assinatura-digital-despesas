@@ -2,7 +2,7 @@ FROM node:22-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install --include=dev
 COPY . .
 ARG NEXT_PUBLIC_API_BASE=https://assinatura-digital-despesas.onrender.com
 ENV NEXT_PUBLIC_API_BASE=${NEXT_PUBLIC_API_BASE}
