@@ -28,10 +28,10 @@ export default function HomePage() {
               <form id="login-form" className="grid gap-3">
                 <TextField name="email" type="email" label="E-mail" autoComplete="username" placeholder="voce@empresa.com" required fullWidth size="small" />
                 <TextField name="password" type="password" label="Senha" autoComplete="current-password" placeholder="Sua senha" required fullWidth size="small" />
-                <Button className="!mt-2" type="submit" variant="contained" fullWidth sx={{ borderRadius: 2, py: 1.2, textTransform: 'none', fontWeight: 700 }}>Entrar <span aria-hidden="true">→</span></Button>
+                <Button className="!mt-2" type="submit" variant="contained" fullWidth sx={{ borderRadius: 2, py: 1.2, textTransform: 'none', fontWeight: 700, bgcolor: '#1e694b', '&:hover': { bgcolor: '#195b43' } }}>Entrar <span aria-hidden="true">→</span></Button>
                 <div id="login-error" className="feedback" role="alert" />
               </form>
-              <div className="demo-box"><span className="demo-dot" /><div><strong>Ambiente de demonstração</strong><small>As contas de demonstração são configuradas no backend local.</small></div></div>
+              <div className="demo-box"><span className="demo-dot" /><div><strong>Ambiente de demonstração</strong><small>As credenciais de demonstração são configuradas pelo responsável do sistema.</small></div></div>
             </div>
             <div className="login-foot">ACESSO SEGURO · SESSÃO COM EXPIRAÇÃO AUTOMÁTICA</div>
           </div>
