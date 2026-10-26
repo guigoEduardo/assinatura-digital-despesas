@@ -79,9 +79,10 @@ As chaves locais ficam no IndexedDB do mesmo navegador e perfil. Limpar os dados
 Este projeto e um demonstrador academico, nao uma plataforma pronta para producao. A assinatura ECDSA prova que a chave privada correspondente assinou os bytes armazenados, e o hash ajuda a detectar alteracoes; a chave criada no navegador nao e uma identidade verificada nem um certificado ICP-Brasil. O codigo, sozinho, nao certifica conformidade juridica, autoria civil ou nao repudio conforme toda a legislacao brasileira. Um uso empresarial real precisa de revisao juridica, identidade e chaves geridas de forma segura, recuperacao e revogacao, logs protegidos, backups, monitoramento, politicas de retencao, TLS e avaliacao de privacidade. Nao coloque dados pessoais, documentos ou despesas reais nesta instancia de demonstracao.
 
 # Alunos
-ANDRE FELIPE DE BORBA BARBOSA
-EDUARDO MAIK OLIVEIRA
-ENZO GABRIEL LOPES OLIVEIRA
-GUILHERME EDUARDO GONÇALVES
-JOÃO PEDRO TEIXEIRA MONTEIRO
-WESLEM FERREIRA DOS SANTOS
+
+- ANDRE FELIPE DE BORBA BARBOSA
+- EDUARDO MAIK OLIVEIRA
+- ENZO GABRIEL LOPES OLIVEIRA
+- GUILHERME EDUARDO GONÇALVES
+- JOÃO PEDRO TEIXEIRA MONTEIRO
+- WESLEM FERREIRA DOS SANTOS
