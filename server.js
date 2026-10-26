@@ -4,7 +4,6 @@ import multer from 'multer';
 import { MongoClient, ObjectId } from 'mongodb';
 import nodemailer from 'nodemailer';
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual, verify as verifySignature } from 'node:crypto';
-import { mkdirSync, unlinkSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,8 +42,8 @@ if (demoUsersEnabled) {
   }
 }
 
-mkdirSync(path.join(root, 'uploads'), { recursive: true });
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' }, contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", 'data:'], objectSrc: ["'none'"], upgradeInsecureRequests: null } } }));
 app.use((req, res, next) => {
   const allowedOrigin = process.env.WEB_ORIGIN;
@@ -95,7 +94,7 @@ async function auth(req, res, next) {
 }
 const managerOnly = (req, res, next) => req.user.role === 'manager' ? next() : res.status(403).json({ error: 'Acesso exclusivo do gerente.' });
 const viewEmployee = ({ _id, name, email, role, department, active, publicKey, createdAt }) => ({ id: _id.toString(), name, email, role, department, active, hasKey: Boolean(publicKey), createdAt });
-const upload = multer({ dest: path.join(root, 'uploads'), limits: { fileSize: 8 * 1024 * 1024 }, fileFilter: (_req, file, cb) => ['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimetype) ? cb(null, true) : cb(new Error('Envie um PDF, JPG ou PNG.')) });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 }, fileFilter: (_req, file, cb) => ['application/pdf', 'image/jpeg', 'image/png'].includes(file.mimetype) ? cb(null, true) : cb(new Error('Envie um PDF, JPG ou PNG.')) });
 const mailer = process.env.SMTP_HOST ? nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 587), secure: Number(process.env.SMTP_PORT) === 465, auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined }) : null;
 async function notify(subject, text) {
   if (!mailer) return;
@@ -106,6 +105,17 @@ async function notify(subject, text) {
   }
 }
 const signedPayload = expense => JSON.stringify({ id: expense._id.toString(), employeeId: expense.employeeId, title: expense.title, amount: Number(expense.amount), description: expense.description, receiptHash: expense.receiptHash, createdAt: new Date(expense.createdAt).toISOString(), validatedAt: new Date(expense.validatedAt).toISOString() });
+function bytesFromMongo(value) {
+  if (Buffer.isBuffer(value)) return value;
+  if (value && Buffer.isBuffer(value.buffer)) return value.buffer.subarray(0, Number.isInteger(value.position) ? value.position : value.buffer.length);
+  return null;
+}
+async function storedReceiptBytes(item) {
+  const persistedBytes = bytesFromMongo(item.receiptData);
+  if (persistedBytes) return persistedBytes;
+  if (item.receiptPath) return readFile(path.join(root, 'uploads', path.basename(item.receiptPath)));
+  return null;
+}
 
 app.post('/api/login', async (req, res) => {
   const address = req.ip;
@@ -160,22 +170,25 @@ app.get('/api/expenses', auth, async (req, res) => {
 app.post('/api/expenses', auth, upload.single('receipt'), async (req, res) => {
   const { title, amount, description } = req.body || {};
   if (!title?.trim() || !Number.isFinite(Number(amount)) || Number(amount) <= 0 || !description?.trim() || !req.file) {
-    if (req.file) unlinkSync(req.file.path);
     return res.status(400).json({ error: 'Preencha o relatorio e anexe um recibo PDF, JPG ou PNG.' });
   }
-  const bytes = await readFile(req.file.path);
+  const bytes = req.file.buffer;
   const validBytes = req.file.mimetype === 'application/pdf' ? bytes.subarray(0, 5).toString() === '%PDF-' : req.file.mimetype === 'image/png' ? bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) : bytes.subarray(0, 3).equals(Buffer.from([255, 216, 255]));
-  if (!validBytes) { unlinkSync(req.file.path); return res.status(400).json({ error: 'O conteudo do arquivo nao corresponde ao formato informado.' }); }
-  const record = { employeeId: req.user._id.toString(), employeeName: req.user.name, title: title.trim().slice(0, 120), amount: Number(Number(amount).toFixed(2)), description: description.trim().slice(0, 1200), receiptName: req.file.originalname.slice(0, 180), receiptPath: req.file.filename, receiptHash: createHash('sha256').update(bytes).digest('hex'), status: 'pending', createdAt: new Date() };
+  if (!validBytes) return res.status(400).json({ error: 'O conteudo do arquivo nao corresponde ao formato informado.' });
+  const record = { employeeId: req.user._id.toString(), employeeName: req.user.name, title: title.trim().slice(0, 120), amount: Number(Number(amount).toFixed(2)), description: description.trim().slice(0, 1200), receiptName: req.file.originalname.slice(0, 180), receiptMimeType: req.file.mimetype, receiptData: bytes, receiptHash: createHash('sha256').update(bytes).digest('hex'), status: 'pending', createdAt: new Date() };
   const result = await expenses.insertOne(record);
   await notify('Novo relatorio aguardando validacao', `${record.employeeName} enviou "${record.title}" para validacao.`);
-  res.status(201).json({ expense: { ...record, id: result.insertedId.toString() } });
+  res.status(201).json({ expense: { id: result.insertedId.toString(), employeeId: record.employeeId, employeeName: record.employeeName, title: record.title, amount: record.amount, description: record.description, receiptName: record.receiptName, receiptHash: record.receiptHash, status: record.status, createdAt: record.createdAt } });
 });
 app.get('/api/expenses/:id/receipt', auth, async (req, res) => {
   if (!ObjectId.isValid(req.params.id)) return res.sendStatus(404);
   const item = await expenses.findOne({ _id: new ObjectId(req.params.id) });
   if (!item || (req.user.role !== 'manager' && item.employeeId !== req.user._id.toString())) return res.sendStatus(404);
-  res.download(path.join(root, 'uploads', path.basename(item.receiptPath)), item.receiptName);
+  try {
+    const bytes = await storedReceiptBytes(item);
+    if (!bytes) return res.sendStatus(404);
+    res.type(item.receiptMimeType || 'application/octet-stream').attachment(item.receiptName || 'recibo').send(bytes);
+  } catch { res.sendStatus(404); }
 });
 app.post('/api/expenses/:id/validate', auth, managerOnly, async (req, res) => {
   if (!ObjectId.isValid(req.params.id)) return res.status(400).json({ error: 'Relatorio invalido.' });
@@ -205,11 +218,12 @@ app.get('/api/expenses/:id/verify', auth, managerOnly, async (req, res) => {
   const item = await expenses.findOne({ _id: new ObjectId(req.params.id) });
   if (!item || !item.signature || !item.publicKey || !item.signedPayload) return res.status(404).json({ error: 'O relatorio ainda nao foi assinado.' });
   let signatureValid = false;
-  try { const key = item.publicKey.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s/g, ''); signatureValid = verifySignature('sha256', Buffer.from(item.signedPayload), { key: Buffer.from(key, 'base64'), format: 'der', type: 'spki', dsaEncoding: 'ieee-p1363' }, Buffer.from(item.signature, 'base64')); } catch {}
+  let currentPayload = '';
+  try { const key = item.publicKey.replace(/-----BEGIN PUBLIC KEY-----|-----END PUBLIC KEY-----|\s/g, ''); currentPayload = signedPayload(item); signatureValid = verifySignature('sha256', Buffer.from(currentPayload), { key: Buffer.from(key, 'base64'), format: 'der', type: 'spki', dsaEncoding: 'ieee-p1363' }, Buffer.from(item.signature, 'base64')); } catch {}
   let receiptValid = false;
-  try { receiptValid = createHash('sha256').update(await readFile(path.join(root, 'uploads', path.basename(item.receiptPath)))).digest('hex') === item.receiptHash; } catch {}
+  try { const bytes = await storedReceiptBytes(item); receiptValid = Boolean(bytes) && createHash('sha256').update(bytes).digest('hex') === item.receiptHash; } catch {}
   const valid = signatureValid && receiptValid;
-  res.json({ valid, signatureValid, receiptValid, signer: item.employeeName, signedAt: item.signedAt, digest: createHash('sha256').update(item.signedPayload).digest('hex'), message: valid ? 'Assinatura valida e recibo identico ao arquivo registrado.' : !receiptValid ? 'O recibo armazenado nao corresponde ao hash registrado.' : 'Assinatura invalida: o conteudo ou a chave podem ter sido alterados.' });
+  res.json({ valid, signatureValid, receiptValid, signer: item.employeeName, signedAt: item.signedAt, digest: createHash('sha256').update(currentPayload || item.signedPayload).digest('hex'), message: valid ? 'Assinatura valida e recibo identico ao arquivo registrado.' : !receiptValid ? 'O recibo armazenado nao corresponde ao hash registrado.' : 'Assinatura invalida: o conteudo ou a chave podem ter sido alterados.' });
 });
 app.use((error, _req, res, _next) => { console.error(error.message); res.status(error instanceof multer.MulterError ? 400 : 500).json({ error: error instanceof multer.MulterError ? 'Arquivo excede 8 MB ou e invalido.' : error.message.includes('Envie um PDF') ? error.message : 'Erro interno. Tente novamente.' }); });
 app.listen(port, '0.0.0.0', () => console.log(`AssinaDespesas disponivel na porta ${port}`));

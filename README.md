@@ -6,7 +6,7 @@ Demonstrador acadêmico de gestão de despesas com revisão e assinatura digital
 
 - Login com senhas armazenadas como hashes scrypt, token assinado HMAC e limitação de tentativas.
 - Cadastro, edição e ativação de funcionários com perfis de gerente e colaborador.
-- Envio de despesas com recibos PDF, JPG ou PNG de até 8 MB; validação do formato e cálculo do hash SHA-256.
+- Envio de despesas com recibos PDF, JPG ou PNG de até 8 MB; validação do formato, armazenamento binário no MongoDB e cálculo do hash SHA-256.
 - Fluxo de revisão do gerente, assinatura do colaborador e verificação criptográfica pelo gerente.
 - Assinatura ECDSA P-256 via Web Crypto. A chave privada não é exportável e fica no navegador do colaborador; a API armazena a chave pública.
 - Avisos por e-mail opcionais com Nodemailer e credenciais SMTP fornecidas em tempo de execução.
@@ -59,9 +59,9 @@ Nunca coloque segredos no repositório, no código do frontend ou no histórico 
 1. O colaborador cria uma despesa e envia o recibo. A API calcula o hash SHA-256 do arquivo.
 2. O gerente revisa o relatório e o marca como validado.
 3. O colaborador cria/vincula a chave no dispositivo e assina os dados do relatório com ECDSA.
-4. A API verifica a assinatura antes de marcar o relatório como assinado. O gerente pode verificar novamente a assinatura e o hash do recibo.
+4. A API verifica a assinatura antes de marcar o relatório como assinado. O gerente pode verificar novamente a assinatura contra os dados atuais do relatório e conferir o hash do recibo recuperado do MongoDB. Alterações posteriores nos campos assinados invalidam a verificação.
 
-As chaves locais ficam no IndexedDB do mesmo navegador e perfil. Limpar os dados do navegador pode tornar a chave indisponível; gere e associe uma nova antes de novas assinaturas.
+As chaves locais ficam no IndexedDB do mesmo navegador e perfil. Limpar os dados do navegador pode tornar a chave indisponível; gere e associe uma nova antes de novas assinaturas. Recibos novos são armazenados no MongoDB para não depender do disco efêmero do container da aplicação.
 
 ## Estrutura
 
@@ -71,7 +71,6 @@ As chaves locais ficam no IndexedDB do mesmo navegador e perfil. Limpar os dados
 - `server.js`: API, autenticacao, validacao de fluxo, armazenamento e verificacao criptografica.
 - `docker-compose.yml`: orquestracao de tres servicos para desenvolvimento local.
 - `Dockerfile.api`, `Dockerfile.web`, `nginx.conf`: API, servidor web e proxy reverso no Compose.
-- `docs/traceability.md`: matriz de atendimento ao enunciado e roteiro da demonstracao.
 - `.github/workflows/pages.yml`: build e publicação no GitHub Pages.
 
 ## Limites do protótipo
