@@ -1,5 +1,4 @@
 import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
 
 const repositoryName = process.env.GITHUB_REPOSITORY?.split('/')[1] || 'assinatura-digital-despesas';
 const assetBasePath = process.env.GITHUB_ACTIONS === 'true' ? `/${repositoryName}` : '';
@@ -25,9 +24,9 @@ export default function HomePage() {
               <span className="eyebrow">BEM-VINDO DE VOLTA</span>
               <h2>Acesse sua conta</h2>
               <p className="muted">Entre para continuar no painel de despesas.</p>
-              <form id="login-form" className="grid gap-3">
-                <TextField name="email" type="email" label="E-mail" autoComplete="username" placeholder="voce@empresa.com" required fullWidth size="small" />
-                <TextField name="password" type="password" label="Senha" autoComplete="current-password" placeholder="Sua senha" required fullWidth size="small" />
+              <form id="login-form">
+                <label>E-mail<input name="email" type="email" autoComplete="username" placeholder="voce@empresa.com" required /></label>
+                <label>Senha<input name="password" type="password" autoComplete="current-password" placeholder="Sua senha" required /></label>
                 <Button className="!mt-2" type="submit" variant="contained" fullWidth sx={{ borderRadius: 2, py: 1.2, textTransform: 'none', fontWeight: 700, bgcolor: '#1e694b', '&:hover': { bgcolor: '#195b43' } }}>Entrar <span aria-hidden="true">→</span></Button>
                 <div id="login-error" className="feedback" role="alert" />
               </form>
